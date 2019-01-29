@@ -2,7 +2,7 @@
 
 set -e
 
-if [ -z "$function_name" ]; then
+if [ "$function_name" = "" ]; then
     function_name=$(basename $(pwd))    # Lambda関数名
 fi
 
