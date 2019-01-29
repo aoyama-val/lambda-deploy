@@ -1,12 +1,13 @@
 // https://qiita.com/imaifactory/items/ac81b4a3ff4a5f5dec85
 
 var exec = require('child_process').exec,
+  path = require('path'),
   package = require(process.cwd() + '/package');
 
 var COMMAND_PREFIX = 'rm -fr pkg; mkdir pkg; zip -r';
 
-var target = package.name,
-  main = '*.js',
+var target = path.basename(process.cwd()),
+  main = '*.js',  // zipに含めるソースファイル
   npm_dir = 'node_modules',
   excludes_str = '';
 
