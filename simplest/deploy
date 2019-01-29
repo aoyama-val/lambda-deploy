@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -eu
+
+function_name=$(basename $(pwd))    # Lambda関数名
+
+echo "function_name = [$function_name]"
+
+zip_path="$function_name.zip"
+
+rm -f "$zip_path"
+
+zip -r "$zip_path" ./* -x 'node_modules/aws-sdk/*'
+
+aws lambda update-function-code --function-name "$function_name" --zip-file "fileb://${zip_path}" --publish

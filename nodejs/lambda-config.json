@@ -1,0 +1,15 @@
+{
+  "environments": {
+    "production": {
+      "functionName": "書き換えてね"
+    }
+  },
+  "region": "ap-northeast-1",
+  "description": "",
+  "runtime": "nodejs8.10",
+  "role": "arn:aws:iam::書き換えてね:role/書き換えてね",
+  "memorySize": "128",
+  "timeout": "60",
+  "handlerFile": "index",
+  "handlerMethod": "handler"
+}
