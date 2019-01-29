@@ -2,6 +2,9 @@
   "environments": {
     "production": {
       "functionName": "書き換えてね"
+    },
+    "development": {
+      "functionName": "書き換えてね"
     }
   },
   "region": "ap-northeast-1",

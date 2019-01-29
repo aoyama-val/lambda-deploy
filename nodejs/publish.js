@@ -3,7 +3,7 @@ var proxy = process.env.https_proxy ? process.env.https_proxy : '';
 var aws = require('aws-sdk'),
   fs = require('fs'),
   lambdaConfig = require(process.cwd() + '/lambda-config'),
-  pkgConfig = require(process.cwd() + '/package');
+  path = require('path');
 
 var deployEnv = lambdaConfig.environments[process.env.DEPLOY];
 if (!deployEnv) {
@@ -16,7 +16,7 @@ var lambda = new aws.Lambda({
   region: lambdaConfig.region,
   httpOptions: {proxy: proxy}
 });
-var zipPath = 'pkg/' + pkgConfig.name + '.zip';
+var zipPath = 'pkg/' + path.basename(process.cwd()) + '.zip';
 
 // https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Lambda.html#updateFunctionCode-property
 var params = {
@@ -29,13 +29,13 @@ lambda.updateFunctionCode(params, function (err, data) {
   } else {
     // https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Lambda.html#updateFunctionConfiguration-property
     var configuration = {
-      Description: lambdaConfig.description,
-      FunctionName: deployEnv.functionName,
-      Handler: buildHandlerName(lambdaConfig),
-      MemorySize: lambdaConfig.memorySize,
-      Role: lambdaConfig.role,
-      Runtime: lambdaConfig.runtime,
-      Timeout: lambdaConfig.timeout,
+      Description: getConfig['description'],
+      FunctionName: getConfig['functionName'],
+      Handler: getConfig['handlerFile'] + '.' + getConfig['handlerMethod'],
+      MemorySize: getConfig['memorySize'],
+      Role: getConfig['role'],
+      Runtime: getConfig['runtime'],
+      Timeout: getConfig['timeout'],
       Environment: { Variables: { LAMBDA_ENV: process.env.DEPLOY } },
     };
     lambda.updateFunctionConfiguration(configuration, function (err, data) {
@@ -45,6 +45,6 @@ lambda.updateFunctionCode(params, function (err, data) {
   }
 });
 
-function buildHandlerName(lambdaConfig) {
-  return lambdaConfig.handlerFile + '.' + lambdaConfig.handlerMethod;
+function getConfig(key) {
+  return (typeof(deployEnv[key]) != 'undefined') ? deployEnv[key] : lambdaConfig[key];
 }
