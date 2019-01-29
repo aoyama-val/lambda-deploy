@@ -1,8 +1,10 @@
 #!/bin/sh
 
-set -eu
+set -e
 
-function_name=$(basename $(pwd))    # Lambda関数名
+if [ -z "$function_name" ]; then
+    function_name=$(basename $(pwd))    # Lambda関数名
+fi
 
 echo "function_name = [$function_name]"
 
