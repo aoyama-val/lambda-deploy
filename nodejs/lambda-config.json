@@ -1,7 +1,7 @@
 {
   "environments": {
     "production": {
-      "functionName": "aoyama-lambda-phantomjs-font"
+      "functionName": "書き換えてね"
     },
     "development": {
       "functionName": "書き換えてね"
@@ -10,9 +10,9 @@
   "region": "ap-northeast-1",
   "description": "",
   "runtime": "nodejs8.10",
-  "role": "arn:aws:iam::944122690951:role/lambda_s3_exec_role",
+  "role": "書き換えてね",
   "memorySize": "256",
-  "timeout": "5",
+  "timeout": "3",
   "handlerFile": "index",
   "handlerMethod": "handler",
   "zipFile": {
