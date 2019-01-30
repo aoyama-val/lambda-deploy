@@ -14,5 +14,9 @@
   "memorySize": "128",
   "timeout": "3",
   "handlerFile": "index",
-  "handlerMethod": "handler"
+  "handlerMethod": "handler",
+  "zipFile": {
+    "include": ["."],
+    "exclude": ["node_modules/aws-sdk/*"]
+  }
 }

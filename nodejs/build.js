@@ -1,39 +1,25 @@
-// https://qiita.com/imaifactory/items/ac81b4a3ff4a5f5dec85
+var exec = require('child_process').exec;
+var path = require('path');
+var lambdaConfig = require(process.cwd() + '/lambda-config.json');
 
-var exec = require('child_process').exec,
-  path = require('path'),
-  package = require(process.cwd() + '/package');
-
-var COMMAND_PREFIX = 'rm -fr pkg; mkdir pkg; zip -r';
-
-var target = path.basename(process.cwd()),
-  main = '*.js',  // zipに含めるソースファイル
-  npm_dir = 'node_modules',
-  excludes_str = '';
-
-if (package.devDependencies && Object.keys(package.devDependencies).length > 0) {
-  excludes_str = ' -x ';
-  Object.keys(package.devDependencies).forEach(function (key) {
-    excludes_str = excludes_str + build_exclude_str(key);
+function build() {
+  exec(buildZipCommand(), function (err, stdout, stderr) {
+    if (err) console.log(err);
+    console.log(stdout);
+    console.log(stderr);
   });
 }
-exec(build_command_str(target, main, excludes_str), function (err, stdout, stderr) {
-  if (err) console.log(err);
-  console.log(stdout);
-  console.log(stderr);
-});
 
-function build_exclude_str(key) {
-  return npm_dir + '/' + key + '\\* ';
+function buildZipCommand() {
+  var packageName = path.basename(process.cwd());
+  var zipPath = 'pkg/' + packageName + '.zip';
+  var sourceFiles = lambdaConfig.zipFile.include;
+  var excludePatterns = lambdaConfig.zipFile.exclude;
+  var cmd = 'mkdir -p pkg && zip -r ' + zipPath + ' ' + sourceFiles.join(' ');
+  excludePatterns.forEach(function(pattern) {
+    cmd += ' --exclude ' + pattern;
+  });
+  return cmd;
 }
 
-function build_command_str(target, main, excludes_str) {
-  return COMMAND_PREFIX
-    + ' pkg/' +
-    target
-    + '.zip ' +
-    main
-    + ' ' +
-    npm_dir
-    + excludes_str;
-}
+build();
