@@ -8,6 +8,12 @@ var deployEnv = lambdaConfig.environments[process.env.DEPLOY];
 var zipPath = 'pkg/' + path.basename(process.cwd()) + '.zip';
 
 function main() {
+  if (!deployEnv) {
+    console.log('環境変数 $DEPLOY が正しく設定されていません [', process.env.DEPLOY, ']');
+    console.log('次のいずれかの値を設定してください: ' + Object.keys(lambdaConfig.environments).join(', '));
+    process.exit(1);
+  }
+
   var args = process.argv.slice(2);
   if (args.length == 0) {
     build();
@@ -34,7 +40,7 @@ function build() {
 
 function getZipCommand() {
   var packageName = path.basename(process.cwd());
-  var sourceFiles = _try(() => getConfig('zipFile').include) || [];
+  var sourceFiles = _try(() => getConfig('zipFile').include) || ['*'];
   var excludePatterns = _try(() => getConfig('zipFile').exclude) || [];
   var cmd = 'rm -rf pkg && mkdir pkg && zip -r ' + zipPath + ' ' + sourceFiles.join(' ');
   excludePatterns.forEach(function(pattern) {
@@ -44,12 +50,6 @@ function getZipCommand() {
 }
 
 function publish() {
-  if (!deployEnv) {
-    console.log('環境変数 $DEPLOY が正しく設定されていません [', process.env.DEPLOY, ']');
-    console.log('次のいずれかの値を設定してください: ' + Object.keys(lambdaConfig.environments).join(', '));
-    process.exit(1);
-  }
-
   var proxy = process.env.https_proxy ? process.env.https_proxy : '';
   var lambda = new aws.Lambda({
     region: getConfig('region'),
