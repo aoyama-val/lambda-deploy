@@ -2,9 +2,9 @@ var aws = require('aws-sdk');
 var fs = require('fs');
 var path = require('path');
 var lambdaConfig = require(process.cwd() + '/lambda-config.json');
+var deployEnv = lambdaConfig.environments[process.env.DEPLOY];
 
 function publish() {
-  var deployEnv = lambdaConfig.environments[process.env.DEPLOY];
   if (!deployEnv) {
     console.log('環境変数 $DEPLOY が正しく設定されていません [', process.env.DEPLOY, ']');
     console.log('次のいずれかの値を設定してください: ' + Object.keys(lambdaConfig.environments).join(', '));
@@ -29,13 +29,13 @@ function publish() {
     } else {
       // https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Lambda.html#updateFunctionConfiguration-property
       var configuration = {
-        Description: getConfig['description'],
-        FunctionName: getConfig['functionName'],
-        Handler: getConfig['handlerFile'] + '.' + getConfig['handlerMethod'],
-        MemorySize: getConfig['memorySize'],
-        Role: getConfig['role'],
-        Runtime: getConfig['runtime'],
-        Timeout: getConfig['timeout'],
+        Description: getConfig('description'),
+        FunctionName: getConfig('functionName'),
+        Handler: getConfig('handlerFile') + '.' + getConfig('handlerMethod'),
+        MemorySize: getConfig('memorySize'),
+        Role: getConfig('role'),
+        Runtime: getConfig('runtime'),
+        Timeout: getConfig('timeout'),
         Environment: { Variables: { LAMBDA_ENV: process.env.DEPLOY } },
       };
       lambda.updateFunctionConfiguration(configuration, function (err, data) {
