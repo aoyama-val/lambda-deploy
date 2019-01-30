@@ -7,6 +7,5 @@
 実行:
 
 ```
-$ node build.js
-$ DEPLOY=production node publish.js
+$ DEPLOY=production node deploy.js
 ```

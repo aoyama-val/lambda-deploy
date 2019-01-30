@@ -1,8 +1,47 @@
 var aws = require('aws-sdk');
+var execSync = require('child_process').execSync;
 var fs = require('fs');
 var path = require('path');
+
 var lambdaConfig = require(process.cwd() + '/lambda-config.json');
 var deployEnv = lambdaConfig.environments[process.env.DEPLOY];
+var zipPath = 'pkg/' + path.basename(process.cwd()) + '.zip';
+
+function main() {
+  var args = process.argv.slice(2);
+  if (args.length == 0) {
+    build();
+    publish();
+  } else {
+    process.argv.forEach(function(arg) {
+      switch (arg) {
+        case 'build':
+          build();
+          break;
+        case 'publish':
+          publish();
+          break;
+      }
+    });
+  }
+}
+
+function build() {
+  var cmd = getZipCommand();
+  console.log(cmd);
+  console.log(execSync(cmd).toString());
+}
+
+function getZipCommand() {
+  var packageName = path.basename(process.cwd());
+  var sourceFiles = _try(() => getConfig('zipFile').include) || [];
+  var excludePatterns = _try(() => getConfig('zipFile').exclude) || [];
+  var cmd = 'rm -rf pkg && mkdir pkg && zip -r ' + zipPath + ' ' + sourceFiles.join(' ');
+  excludePatterns.forEach(function(pattern) {
+    cmd += " --exclude '" + pattern + "'";
+  });
+  return cmd;
+}
 
 function publish() {
   if (!deployEnv) {
@@ -13,10 +52,9 @@ function publish() {
 
   var proxy = process.env.https_proxy ? process.env.https_proxy : '';
   var lambda = new aws.Lambda({
-    region: lambdaConfig.region,
+    region: getConfig('region'),
     httpOptions: {proxy: proxy}
   });
-  var zipPath = 'pkg/' + path.basename(process.cwd()) + '.zip';
 
   // https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Lambda.html#updateFunctionCode-property
   var params = {
@@ -50,4 +88,16 @@ function getConfig(key) {
   return (typeof(deployEnv[key]) != 'undefined') ? deployEnv[key] : lambdaConfig[key];
 }
 
-publish();
+function _try(func, fallbackValue) {
+  try {
+    var value = func();
+    return (value === null || value === undefined) ? fallbackValue : value;
+  } catch (e) {
+    return fallbackValue;
+  }
+}
+
+
+if (typeof require != 'undefined' && require.main == module) {
+  main();
+}
