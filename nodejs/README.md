@@ -7,6 +7,12 @@ deploy.jsとlambda-config.jsonをプロジェクトのディレクトリにコ�
 
 - lambda-config.json
 
+`role` の arn は下記コマンドでわかる
+
+```
+$ aws lambda get-function --function-name 関数名
+```
+
 実行:
 
 ```

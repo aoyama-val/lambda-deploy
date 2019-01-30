@@ -1,2 +1,3 @@
 *.zip
 node_modules/*
+nodejs/test/lambda-config.json
