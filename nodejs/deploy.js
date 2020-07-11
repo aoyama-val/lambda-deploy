@@ -1,48 +1,63 @@
-var aws = require('aws-sdk');
-var execSync = require('child_process').execSync;
-var fs = require('fs');
-var path = require('path');
+const aws = require('aws-sdk');
+const execSync = require('child_process').execSync;
+const fs = require('fs');
+const path = require('path');
 
-var lambdaConfig = require(process.cwd() + '/lambda-config.json');
-var deployEnv = lambdaConfig.environments[process.env.DEPLOY];
-var zipPath = 'pkg/' + path.basename(process.cwd()) + '.zip';
+const lambdaConfigPath = process.cwd() + '/lambda-config.json';
+if (!fs.existsSync(lambdaConfigPath)) {
+  console.log('lambda-config.jsonが存在しません。');
+  process.exit(1);
+}
+const lambdaConfig = require(lambdaConfigPath);
+const envName = process.argv[2];
+const deployEnv = lambdaConfig.environments[envName];
+const zipPath = 'pkg/' + path.basename(process.cwd()) + '.zip';
+
+let optSilent = false;
+let optNoRmZip = false;
 
 function main() {
+  if (process.argv.length < 3) {
+    console.log('引数が不足しています。');
+    console.log(`Usage: node deploy.js <環境名> [--verbose] [--no-rm-zip]`);
+    process.exit(1);
+  }
   if (!deployEnv) {
-    console.log('環境変数 $DEPLOY が正しく設定されていません [', process.env.DEPLOY, ']');
-    console.log('次のいずれかの値を設定してください: ' + Object.keys(lambdaConfig.environments).join(', '));
+    console.log('環境名が不正です: "' + envName + '"');
+    console.log('次のいずれかの値を設定してください: ' + JSON.stringify(Object.keys(lambdaConfig.environments)));
     process.exit(1);
   }
 
-  var args = process.argv.slice(2);
-  if (args.length == 0) {
-    build();
-    publish();
-  } else {
-    process.argv.forEach(function(arg) {
-      switch (arg) {
-        case 'build':
-          build();
-          break;
-        case 'publish':
-          publish();
-          break;
-      }
-    });
+  let options = process.argv.slice(3);
+  for (let option of options) {
+    switch (option) {
+      case '--silent': optSilent = true; break;
+      case '--no-rm-zip': optNoRmZip = true; break;
+    }
+  }
+  build();
+  publish();
+  if (optNoRmZip == false) {
+    execSync(`rm -rf pkg`);
   }
 }
 
 function build() {
-  var cmd = getZipCommand();
-  console.log(cmd);
-  console.log(execSync(cmd).toString());
+  let cmd = getZipCommand();
+  if (!optSilent) {
+    console.log(cmd);
+  }
+  let stdout = execSync(cmd).toString();
+  if (!optSilent) {
+    console.log(stdout);
+  }
 }
 
 function getZipCommand() {
-  var packageName = path.basename(process.cwd());
-  var sourceFiles = _try(() => getConfig('zipFile').include) || ['*'];
-  var excludePatterns = _try(() => getConfig('zipFile').exclude) || [];
-  var cmd = 'rm -rf pkg && mkdir pkg && zip -r ' + zipPath + ' ' + sourceFiles.join(' ');
+  let packageName = path.basename(process.cwd());
+  let sourceFiles = _try(() => getConfig('zipFile').include) || ['*'];
+  let excludePatterns = _try(() => getConfig('zipFile').exclude) || [];
+  let cmd = 'rm -rf pkg && mkdir pkg && zip -r ' + zipPath + ' ' + sourceFiles.join(' ');
   excludePatterns.forEach(function(pattern) {
     cmd += " --exclude '" + pattern + "'";
   });
@@ -50,14 +65,14 @@ function getZipCommand() {
 }
 
 function publish() {
-  var proxy = process.env.https_proxy ? process.env.https_proxy : '';
-  var lambda = new aws.Lambda({
+  let proxy = process.env.https_proxy ? process.env.https_proxy : '';
+  let lambda = new aws.Lambda({
     region: getConfig('region'),
     httpOptions: {proxy: proxy}
   });
 
   // https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Lambda.html#updateFunctionCode-property
-  var params = {
+  let params = {
     FunctionName: deployEnv.functionName,
     ZipFile: fs.readFileSync(zipPath)
   };
@@ -66,19 +81,31 @@ function publish() {
       console.log(err, err.stack);
     } else {
       // https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Lambda.html#updateFunctionConfiguration-property
-      var configuration = {
+      let configuration = {
         Description: getConfig('description'),
         FunctionName: getConfig('functionName'),
-        Handler: getConfig('handlerFile') + '.' + getConfig('handlerMethod'),
+        Handler: (getConfig('handlerFile') != undefined && getConfig('handlerMethod') != undefined) ? getConfig('handlerFile') + '.' + getConfig('handlerMethod') : undefined,
         MemorySize: getConfig('memorySize'),
         Role: getConfig('role'),
         Runtime: getConfig('runtime'),
         Timeout: getConfig('timeout'),
-        Environment: { Variables: { LAMBDA_ENV: process.env.DEPLOY } },
+        Environment: {
+          Variables: getConfig('environment'),
+        },
       };
+      Object.keys(configuration).forEach(key => {
+        if (configuration[key] === undefined) {
+          delete configuration[key];
+        }
+      });
       lambda.updateFunctionConfiguration(configuration, function (err, data) {
         if (err) console.log(err, err.stack);
-        else console.log(data);
+        else {
+          if (!optSilent) {
+            console.log(data);
+            console.log('');
+          }
+          console.log(`デプロイ成功 [${envName}] ${configuration['FunctionName']}`); }
       });
     }
   });
@@ -89,8 +116,9 @@ function getConfig(key) {
 }
 
 function _try(func, fallbackValue) {
+  let value;
   try {
-    var value = func();
+    value = func();
     return (value === null || value === undefined) ? fallbackValue : value;
   } catch (e) {
     return fallbackValue;
